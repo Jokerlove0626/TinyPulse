@@ -3,121 +3,210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TinyPulse | 跨端游戏实验室</title>
+    <title>TinyPulse | Wasm Game Lab</title>
     <style>
-        :root { --accent: #f1c40f; --bg: #0f0f0f; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
-        
-        header { width: 100%; padding: 40px 0; text-align: center; background: linear-gradient(to bottom, #1a1a1a, var(--bg)); }
-        header h1 { margin: 0; font-size: 2.5em; letter-spacing: 4px; color: var(--accent); }
-        header p { color: #888; margin-top: 10px; }
-
-        .game-wrapper {
-            position: relative;
-            width: 800px; height: 620px;
-            background: #000;
-            /* 重点：增加霓虹灯边框 */
-            border: 3px solid #f1c40f; 
-            border-radius: 12px;
-            box-shadow: 0 0 20px rgba(241, 196, 15, 0.3), 
-                        inset 0 0 10px rgba(241, 196, 15, 0.2);
-            margin: 20px 0;
-            overflow: hidden;
-            transition: all 0.3s ease;
+        :root { 
+            --accent: #f1c40f; 
+            --bg: #0a0a0a; 
+            --panel: rgba(25, 25, 25, 0.8);
+            --border: rgba(255, 255, 255, 0.1);
         }
 
-        /* 鼠标悬停时发光加深 */
-        .game-wrapper:hover {
-            box-shadow: 0 0 40px rgba(241, 196, 15, 0.5);
-            border-color: #fff;
+        /* --- 启动简介页 --- */
+        #intro-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%);
+            z-index: 9999;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+        .intro-title { font-size: 3.5em; font-weight: 900; letter-spacing: 12px; color: var(--accent); margin-bottom: 10px; }
+        .intro-author { font-size: 0.9em; color: #555; letter-spacing: 4px; margin-bottom: 40px; }
+        .enter-btn {
+            background: transparent; border: 1px solid var(--accent); color: var(--accent);
+            padding: 15px 50px; border-radius: 4px; cursor: pointer;
+            font-weight: bold; letter-spacing: 4px; transition: 0.3s;
+        }
+        .enter-btn:hover { background: var(--accent); color: #000; box-shadow: 0 0 30px rgba(241, 196, 15, 0.4); }
+
+        body { 
+            background: var(--bg); color: #fff; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+            margin: 0; display: flex; height: 100vh; 
+            overflow: hidden; touch-action: none; 
         }
 
-        iframe { width: 100%; height: 100%; border: none; }
-
-        .stats-container {
-            width: 800px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 50px;
+        .blur-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 50% 50%, #222, #000);
+            z-index: -1; transition: background 1s ease;
         }
 
-        .stat-card {
-            background: #1a1a1a;
-            padding: 20px;
-            border-radius: 12px;
-            border-top: 3px solid var(--accent);
-            text-align: center;
+        nav { 
+            width: 280px; background: var(--panel); backdrop-filter: blur(20px);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; padding: 30px 20px;
+            z-index: 10;
         }
+        nav h1 { font-size: 1.2em; letter-spacing: 4px; color: var(--accent); margin-bottom: 40px; text-align: center; font-weight: 900; }
+        .menu-container { flex: 1; overflow-y: auto; }
+        .menu-container::-webkit-scrollbar { width: 0px; }
 
-        .stat-card h3 { margin: 0; font-size: 0.9em; color: #888; text-transform: uppercase; }
-        .stat-card .value { font-size: 2em; margin: 10px 0 0; font-weight: bold; color: #fff; }
+        .game-card {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            padding: 16px; border-radius: 12px; margin-bottom: 15px;
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; align-items: center; gap: 15px;
+        }
+        .game-card:hover { background: rgba(255,255,255,0.08); border-color: var(--accent); transform: translateX(10px); }
+        .game-card.active { background: var(--accent); color: #000; box-shadow: 0 10px 30px rgba(241, 196, 15, 0.3); border-color: transparent; }
+        .game-card i { font-style: normal; font-size: 1.8em; }
+        .game-card .info .name { font-weight: bold; font-size: 0.9em; }
+        .game-card .info .tag { font-size: 0.7em; opacity: 0.7; margin-top: 4px; }
 
-        .tag { background: #333; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; color: var(--accent); }
+        main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        .viewport-header { width: 800px; display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; }
+        .game-title-large { font-size: 1.8em; font-weight: 800; margin: 0; }
+
+        .engine-container {
+            width: 800px; height: 600px; 
+            background: #000; border-radius: 12px;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+            border: 2px solid var(--accent); 
+            overflow: hidden; position: relative; display: flex;
+        }
+        iframe { width: 800px; height: 600px; border: none; display: block; }
+
+        .platform-status { width: 800px; margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .stat-box { background: var(--panel); padding: 12px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .stat-box label { font-size: 0.6em; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-box div { font-size: 1.1em; font-weight: bold; margin-top: 5px; font-family: monospace; }
     </style>
 </head>
 <body>
 
-    <header>
+    <div id="intro-overlay">
+        <div class="intro-title">TINY PULSE</div>
+        <div class="intro-author">DESIGNED BY JOKERLOVE0626</div>
+        <button class="enter-btn" onclick="startSystem()">INITIALIZE ENGINE</button>
+    </div>
+
+    <div class="blur-bg" id="dynamic-bg"></div>
+
+    <nav>
         <h1>TINY PULSE</h1>
-        <p>高性能 WebAssembly 游戏集成方案 <span class="tag">Wasm + C++</span></p>
-    </header>
-
-    <div class="game-wrapper">
-        <iframe src="games/tetris/index.html" id="game-engine"></iframe>
-    </div>
-
-    <div class="stats-container">
-        <div class="stat-card">
-            <h3>当前游戏模块</h3>
-            <p class="value" style="color: #3498db;">Tetris Master</p>
+        <div class="menu-container">
+            <div class="game-card active" id="default-game" onclick="switchGame('tetris', this, '#3498db')">
+                <i>🧱</i>
+                <div class="info"><div class="name">TETRIS</div><div class="tag">MATRIX LOGIC</div></div>
+            </div>
+            <div class="game-card" onclick="switchGame('fish', this, '#2ecc71')">
+                <i>🐟</i>
+                <div class="info"><div class="name">HUNGRY FISH</div><div class="tag">DYNAMIC COLLISION</div></div>
+            </div>
+            <div class="game-card" onclick="switchGame('bird', this, '#f1c40f')">
+                <i>🐦</i>
+                <div class="info"><div class="name">FLAPPY BIRD</div><div class="tag">GRAVITY SIM</div></div>
+            </div>
+            <div class="game-card" onclick="switchGame('snake', this, '#e74c3c')">
+                <i>🐍</i>
+                <div class="info"><div class="name">NEON SNAKE</div><div class="tag">ARRAY LOGIC</div></div>
+            </div>
+            <div class="game-card" onclick="switchGame('mines', this, '#7f8c8d')">
+                <i>💣</i>
+                <div class="info"><div class="name">MINESWEEPER</div><div class="tag">RECURSION</div></div>
+            </div>
         </div>
-        <div class="stat-card">
-            <h3>平台最高分</h3>
-            <p id="platform-highscore" class="value">000000</p>
+        <div style="font-size: 0.65em; color: #444; text-align: center; margin-top: 20px;">WASM CORE v2.5 | 2025</div>
+    </nav>
+
+    <main>
+        <div class="viewport-header">
+            <div>
+                <p style="color: var(--accent); font-size: 0.75em; font-weight: bold; margin-bottom: 2px;">ACTIVE MODULE</p>
+                <h2 id="active-name" class="game-title-large">SYSTEM READY</h2>
+            </div>
+            <button onclick="toggleFullScreen()" style="background:none; border:1px solid #444; color:#888; padding:5px 15px; border-radius:20px; cursor:pointer; font-size:0.7em;">FULLSCREEN</button>
         </div>
-    </div>
+
+        <div class="engine-container" id="engine-box">
+            <iframe id="main-frame" src="about:blank"></iframe>
+        </div>
+
+        <div class="platform-status">
+            <div class="stat-box"><label>Developer</label><div>Jokerlove0626</div></div>
+            <div class="stat-box"><label>Record Score</label><div id="high-score" style="color: var(--accent);">000000</div></div>
+            <div class="stat-box"><label>Engine State</label><div style="color: #2ecc71;">ONLINE</div></div>
+        </div>
+    </main>
 
     <script>
-        // 拦截方向键和空格键的默认滚动行为
+        // 初始化系统：关闭简介页并加载第一个游戏
+        function startSystem() {
+            const overlay = document.getElementById('intro-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.visibility = 'hidden';
+                // 关键点：点击进入后才通过 switchGame 加载俄罗斯方块
+                const defaultGame = document.getElementById('default-game');
+                switchGame('tetris', defaultGame, '#3498db');
+            }, 600);
+        }
+
         window.addEventListener("keydown", function(e) {
-            // 32: 空格, 37: 左, 38: 上, 39: 右, 40: 下
-            if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
-                e.preventDefault();
-            }
+            if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) e.preventDefault();
         }, false);
 
+        function switchGame(id, el, themeColor) {
+            const frame = document.getElementById('main-frame');
+            
+            // 彻底重置环境
+            frame.src = "about:blank"; 
+            
+            setTimeout(() => {
+                frame.src = `games/${id}/index.html`;
 
-        // 1. 页面加载时，尝试从本地缓存读取最高分
-        window.onload = function() {
-            const savedScore = localStorage.getItem('tinypulse_tetris_highscore');
-            if (savedScore) {
-                document.getElementById('platform-highscore').innerText = savedScore.padStart(6, '0');
+                frame.onload = function() {
+                    try {
+                        const doc = frame.contentDocument || frame.contentWindow.document;
+                        const style = doc.createElement('style');
+                        style.textContent = `
+                            body, html { margin: 0!important; padding: 0!important; overflow: hidden!important; background: black!important; width: 800px!important; height: 600px!important; }
+                            canvas { position: absolute!important; top: 0!important; left: 0!important; width: 800px!important; height: 600px!important; display: block!important; image-rendering: pixelated; }
+                            #status, #progress, #controls { display: none !important; }
+                        `;
+                        doc.head.insertBefore(style, doc.head.firstChild);
+                        setTimeout(() => frame.contentWindow.focus(), 50);
+                    } catch (e) {}
+                };
+            }, 10);
+
+            document.querySelectorAll('.game-card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById('active-name').innerText = id.toUpperCase() + " MASTER";
+            document.getElementById('dynamic-bg').style.background = `radial-gradient(circle at 50% 50%, ${themeColor}22, #000)`;
+            document.documentElement.style.setProperty('--accent', themeColor);
+        }
+
+        window.UpdateWebScore = function(score) {
+            const hsElem = document.getElementById('high-score');
+            if(score > parseInt(hsElem.innerText)) {
+                hsElem.innerText = score.toString().padStart(6, '0');
+                localStorage.setItem('tinypulse_global_high', score);
             }
         };
 
-        // 2. 更新分数的全局接口
-        window.UpdateWebScore = function(score) {
-            console.log("TinyPulse 接收到游戏提交的分数:", score);
-            const highscoreElem = document.getElementById('platform-highscore');
-            if (!highscoreElem) return;
+        function toggleFullScreen() {
+            const box = document.getElementById('engine-box');
+            if (box.requestFullscreen) box.requestFullscreen();
+            else if (box.webkitRequestFullscreen) box.webkitRequestFullscreen();
+        }
 
-            const currentHigh = parseInt(highscoreElem.innerText);
-            
-            // 3. 只有当新分数大于历史最高分时才更新
-            if (score > currentHigh) {
-                const newScoreStr = score.toString().padStart(6, '0');
-                
-                // 更新 UI
-                highscoreElem.innerText = newScoreStr;
-                highscoreElem.style.color = "#2ecc71"; // 变绿反馈
-                
-                // 【关键】：将新纪录存入浏览器缓存（持久化）
-                localStorage.setItem('tinypulse_tetris_highscore', score.toString());
-                
-                setTimeout(() => { highscoreElem.style.color = "#fff"; }, 1000);
-                console.log("本地最高分已更新并存储:", score);
-            }
+        window.onload = () => {
+            const saved = localStorage.getItem('tinypulse_global_high');
+            if (saved) document.getElementById('high-score').innerText = saved.padStart(6, '0');
         };
     </script>
 </body>

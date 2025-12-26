@@ -1,0 +1,14 @@
+# 编译器和工具链
+emsdk/
+
+# 编译产生的临时文件
+*.o
+*.obj
+*.exe
+
+# 操作系统生成的冗余文件
+.DS_Store
+Thumbs.db
+
+# 构建目录（如果你以后用 CMake 的话）
+build/

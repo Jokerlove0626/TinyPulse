@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyPulse | 跨端游戏实验室</title>
+    <style>
+        :root { --accent: #f1c40f; --bg: #0f0f0f; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        
+        header { width: 100%; padding: 40px 0; text-align: center; background: linear-gradient(to bottom, #1a1a1a, var(--bg)); }
+        header h1 { margin: 0; font-size: 2.5em; letter-spacing: 4px; color: var(--accent); }
+        header p { color: #888; margin-top: 10px; }
+
+        .game-wrapper {
+            position: relative;
+            width: 800px; height: 620px;
+            background: #000;
+            /* 重点：增加霓虹灯边框 */
+            border: 3px solid #f1c40f; 
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.3), 
+                        inset 0 0 10px rgba(241, 196, 15, 0.2);
+            margin: 20px 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        /* 鼠标悬停时发光加深 */
+        .game-wrapper:hover {
+            box-shadow: 0 0 40px rgba(241, 196, 15, 0.5);
+            border-color: #fff;
+        }
+
+        iframe { width: 100%; height: 100%; border: none; }
+
+        .stats-container {
+            width: 800px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 50px;
+        }
+
+        .stat-card {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            border-top: 3px solid var(--accent);
+            text-align: center;
+        }
+
+        .stat-card h3 { margin: 0; font-size: 0.9em; color: #888; text-transform: uppercase; }
+        .stat-card .value { font-size: 2em; margin: 10px 0 0; font-weight: bold; color: #fff; }
+
+        .tag { background: #333; padding: 4px 12px; border-radius: 20px; font-size: 0.8em; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>TINY PULSE</h1>
+        <p>高性能 WebAssembly 游戏集成方案 <span class="tag">Wasm + C++</span></p>
+    </header>
+
+    <div class="game-wrapper">
+        <iframe src="games/tetris/index.html" id="game-engine"></iframe>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>当前游戏模块</h3>
+            <p class="value" style="color: #3498db;">Tetris Master</p>
+        </div>
+        <div class="stat-card">
+            <h3>平台最高分</h3>
+            <p id="platform-highscore" class="value">000000</p>
+        </div>
+    </div>
+
+    <script>
+        // 拦截方向键和空格键的默认滚动行为
+        window.addEventListener("keydown", function(e) {
+            // 32: 空格, 37: 左, 38: 上, 39: 右, 40: 下
+            if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+                e.preventDefault();
+            }
+        }, false);
+
+
+        // 1. 页面加载时，尝试从本地缓存读取最高分
+        window.onload = function() {
+            const savedScore = localStorage.getItem('tinypulse_tetris_highscore');
+            if (savedScore) {
+                document.getElementById('platform-highscore').innerText = savedScore.padStart(6, '0');
+            }
+        };
+
+        // 2. 更新分数的全局接口
+        window.UpdateWebScore = function(score) {
+            console.log("TinyPulse 接收到游戏提交的分数:", score);
+            const highscoreElem = document.getElementById('platform-highscore');
+            if (!highscoreElem) return;
+
+            const currentHigh = parseInt(highscoreElem.innerText);
+            
+            // 3. 只有当新分数大于历史最高分时才更新
+            if (score > currentHigh) {
+                const newScoreStr = score.toString().padStart(6, '0');
+                
+                // 更新 UI
+                highscoreElem.innerText = newScoreStr;
+                highscoreElem.style.color = "#2ecc71"; // 变绿反馈
+                
+                // 【关键】：将新纪录存入浏览器缓存（持久化）
+                localStorage.setItem('tinypulse_tetris_highscore', score.toString());
+                
+                setTimeout(() => { highscoreElem.style.color = "#fff"; }, 1000);
+                console.log("本地最高分已更新并存储:", score);
+            }
+        };
+    </script>
+</body>
+</html>
